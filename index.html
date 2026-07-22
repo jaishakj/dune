@@ -196,9 +196,8 @@
   #film{display:grid; grid-template-columns:1fr 1fr; gap:6vw; align-items:center; background:var(--deep);}
   @media (max-width:820px){ #film{grid-template-columns:1fr;} }
   .poster{
-    aspect-ratio:2/3; background:linear-gradient(160deg, #23180d 0%, var(--void) 60%);
-    position:relative; border:1px solid rgba(232,220,200,0.1);
-    display:flex; align-items:center; justify-content:center;
+  aspect-ratio:2/3; background:url('images/poster.jpeg') center/cover;
+  position:relative; border:1px solid rgba(232,220,200,0.1);
   }
   .poster span{font-family:var(--font-display); font-size:14vw; opacity:0.15; letter-spacing:-0.04em;}
   .film-meta{font-family:var(--font-mono); font-size:12px; color:var(--dust); letter-spacing:0.15em; display:flex; gap:24px; flex-wrap:wrap; margin:20px 0 28px;}
