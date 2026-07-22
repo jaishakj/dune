@@ -548,7 +548,7 @@ gsap.utils.toArray('.world-panel').forEach((el,i)=>{
   let obj={val:0};
   ScrollTrigger.create({
     trigger:'#spice', start:'top 60%',
-    onEnter:()=>{ gsap.to(obj, { val: target, duration:2, ease:'power2.out', onUpdate:()=> statEl.textContent = Math.floor(obj.val); }); }
+    onEnter:()=>{ gsap.to(obj, { val: target, duration:2, ease:'power2.out', onUpdate:()=>{ statEl.textContent = Math.floor(obj.val); } }); }
   });
 
   const canvas = document.getElementById('spice-canvas');
