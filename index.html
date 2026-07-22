@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DUNE — Arrakis Awaits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --sand:#C8A96E;
+    --spice:#D4541A;
+    --void:#060608;
+    --deep:#0E0C0A;
+    --bone:#E8DCC8;
+    --dust:#7A6A54;
+    --sienna:#8B3A1A;
+    --font-display:'Cinzel', serif;
+    --font-body:'EB Garamond', serif;
+    --font-mono:'Space Mono', monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{background:var(--void); scroll-behavior:auto;}
+  body{
+    background:var(--void);
+    color:var(--bone);
+    font-family:var(--font-body);
+    overflow-x:hidden;
+    cursor:none;
+  }
+  ::selection{background:var(--spice); color:var(--void);}
+  a{color:inherit; text-decoration:none;}
+
+  /* respect reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.3em;
+    text-transform:uppercase;
+    color:var(--sand);
+  }
+
+  /* ---------- custom cursor ---------- */
+  .cursor-dot, .cursor-ring{
+    position:fixed; top:0; left:0; pointer-events:none; z-index:9999;
+    transform:translate(-50%,-50%);
+  }
+  .cursor-dot{
+    width:6px; height:6px; background:var(--sand); border-radius:50%;
+  }
+  .cursor-ring{
+    width:28px; height:28px; transition:width .25s ease, height .25s ease, transform .25s ease, background .25s ease;
+  }
+  .cursor-ring svg{width:100%; height:100%; display:block;}
+  .cursor-ring.hover{width:48px; height:48px; transform:translate(-50%,-50%) rotate(45deg);}
+  .cursor-ring.fill{background:rgba(200,169,110,0.10); border-radius:50%;}
+  @media (hover:none){ .cursor-dot,.cursor-ring{display:none;} body{cursor:auto;} }
+
+  /* ---------- opening crawl ---------- */
+  #crawl{
+    position:fixed; inset:0; background:var(--void); z-index:1000;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:0 8vw;
+  }
+  #crawl p{
+    font-family:var(--font-mono); font-size:clamp(14px,2vw,20px);
+    letter-spacing:0.25em; text-transform:uppercase; color:var(--bone);
+  }
+  #crawl span{opacity:0; display:inline-block;}
+
+  /* ---------- sections base ---------- */
+  section{position:relative; width:100%;}
+  .section-pad{padding:14vh 8vw;}
+
+  /* ---------- hero ---------- */
+  #hero{
+    height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative; overflow:hidden; background:radial-gradient(ellipse at center 60%, #17110b 0%, var(--void) 70%);
+  }
+  #hero-canvas{position:absolute; inset:0; z-index:1;}
+  .hero-content{position:relative; z-index:2; text-align:center;}
+  .hero-title{
+    font-family:var(--font-display); font-weight:900;
+    font-size:clamp(64px, 24vw, 260px);
+    letter-spacing:-0.04em; color:var(--bone); line-height:0.9;
+    opacity:0; transform:translateY(60px);
+  }
+  .hero-sub{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.3em;
+    color:var(--dust); margin-top:28px; text-transform:uppercase; opacity:0;
+  }
+  .scroll-indicator{
+    position:absolute; bottom:48px; left:50%; transform:translateX(-50%);
+    width:1px; height:60px; background:linear-gradient(var(--sand), transparent);
+    z-index:2; opacity:0;
+  }
+  .scroll-indicator::after{
+    content:''; position:absolute; left:-2px; top:0; width:5px; height:5px;
+    background:var(--sand); border-radius:50%;
+    animation:dropline 2.2s ease-in-out infinite;
+  }
+  @keyframes dropline{ 0%{top:0; opacity:1;} 90%{opacity:0;} 100%{top:60px; opacity:0;} }
+
+  /* ---------- arrakis / world ---------- */
+  #arrakis{height:300vh;}
+  .arrakis-pin{
+    height:100vh; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .desert-img{
+    position:absolute; inset:0; width:100%; height:100%;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 100%, #B98A4E 0%, #3c2a16 45%, #0E0C0A 80%),
+      linear-gradient(180deg, #1a130b 0%, transparent 40%);
+    transform:scale(0.8);
+  }
+  .desert-img::before{
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(100deg, rgba(232,220,200,0.03) 0px, rgba(232,220,200,0.03) 2px, transparent 2px, transparent 40px);
+  }
+  .shimmer-canvas{position:absolute; inset:0; mix-blend-mode:overlay; opacity:0.5;}
+  .world-copy{position:relative; z-index:3; text-align:center;}
+  .world-panel{opacity:0; transform:translateX(60px); margin-bottom:14px;}
+  .world-panel h2{font-family:var(--font-display); font-size:clamp(36px,7vw,90px); letter-spacing:-0.02em;}
+  .world-panel .coords{font-family:var(--font-mono); font-size:12px; letter-spacing:0.2em; color:var(--dust);}
+
+  /* ---------- characters (horizontal) ---------- */
+  #characters{height:100vh; overflow:hidden; background:var(--deep);}
+  .char-track{display:flex; height:100%; width:max-content;}
+  .char-card{
+    width:44vw; max-width:520px; height:100%; position:relative; flex-shrink:0;
+    display:flex; flex-direction:column; justify-content:flex-end;
+    padding:64px 40px; border-right:1px solid rgba(232,220,200,0.08);
+    overflow:hidden;
+  }
+  .char-card::before{
+    content:''; position:absolute; inset:0;
+    background:var(--portrait, radial-gradient(circle at 50% 30%, #4a3a28, #0E0C0A 75%));
+    filter:grayscale(1) brightness(0.55);
+    transition:filter .6s ease;
+  }
+  .char-card.active::before{filter:grayscale(0) brightness(0.7);}
+  .char-card::after{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--spice);
+  }
+  .char-card > *{position:relative; z-index:2;}
+  .char-name{font-family:var(--font-display); font-size:clamp(28px,3.4vw,44px);}
+  .char-house{font-family:var(--font-mono); font-size:11px; letter-spacing:0.25em; color:var(--sand); margin:10px 0 18px; text-transform:uppercase;}
+  .char-quote{font-family:var(--font-body); font-style:italic; font-size:16px; color:var(--bone); max-width:38ch; line-height:1.6;}
+
+  /* ---------- spice ---------- */
+  #spice{
+    background:radial-gradient(ellipse at 50% 50%, var(--sienna) 0%, var(--void) 68%);
+    height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    position:relative; overflow:hidden;
+  }
+  #spice-canvas{position:absolute; inset:0;}
+  .spice-stat{position:relative; z-index:2; font-family:var(--font-display); font-size:clamp(48px,9vw,120px); font-weight:900; letter-spacing:-0.02em;}
+  .spice-sub{position:relative; z-index:2; font-family:var(--font-mono); font-size:12px; letter-spacing:0.25em; color:var(--dust); margin-top:18px; text-transform:uppercase;}
+
+  /* ---------- houses ---------- */
+  #houses{display:flex; height:100vh;}
+  .house-col{
+    flex:1; position:relative; display:flex; flex-direction:column; justify-content:flex-end;
+    padding:48px 32px; border-top:2px solid var(--house-color);
+    background:linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 100%), var(--deep);
+    transition:flex 0.5s ease;
+  }
+  .house-col:hover{flex:2.2;}
+  .house-col svg{width:56px; height:56px; margin-bottom:24px; stroke:var(--house-color); opacity:0.9;}
+  .house-name{font-family:var(--font-display); font-size:clamp(26px,3.4vw,44px);}
+  .house-motto{font-family:var(--font-body); font-style:italic; color:var(--sand); margin:12px 0 14px; font-size:16px;}
+  .house-desc{font-family:var(--font-body); font-size:13px; color:var(--dust); line-height:1.6; max-width:34ch;}
+
+  /* ---------- prophecy ---------- */
+  #prophecy{
+    background:var(--void); min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:14vh 12vw; position:relative; overflow:hidden;
+  }
+  #storm-canvas{position:absolute; inset:0; opacity:0.6;}
+  .prophecy-text{
+    position:relative; z-index:2; font-family:var(--font-body); font-size:clamp(18px,2.4vw,28px);
+    line-height:1.9; text-align:justify; max-width:900px;
+  }
+  .prophecy-word{opacity:0; display:inline-block; margin-right:0.28em;}
+  .prophecy-label{position:relative; z-index:2; margin-bottom:24px;}
+
+  /* ---------- film ---------- */
+  #film{display:grid; grid-template-columns:1fr 1fr; gap:6vw; align-items:center; background:var(--deep);}
+  @media (max-width:820px){ #film{grid-template-columns:1fr;} }
+  .poster{
+    aspect-ratio:2/3; background:linear-gradient(160deg, #23180d 0%, var(--void) 60%);
+    position:relative; border:1px solid rgba(232,220,200,0.1);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .poster span{font-family:var(--font-display); font-size:14vw; opacity:0.15; letter-spacing:-0.04em;}
+  .film-meta{font-family:var(--font-mono); font-size:12px; color:var(--dust); letter-spacing:0.15em; display:flex; gap:24px; flex-wrap:wrap; margin:20px 0 28px;}
+  .cast-list{list-style:none; margin:24px 0 32px; font-family:var(--font-body); font-size:15px;}
+  .cast-list li{opacity:0; transform:translateY(14px); padding:4px 0; border-bottom:1px solid rgba(232,220,200,0.06);}
+  .btn-row{display:flex; gap:20px; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.2em; text-transform:uppercase;
+    padding:16px 26px; border:1px solid var(--sand); color:var(--bone); background:transparent; cursor:none;
+    transition:background .3s ease, color .3s ease;
+  }
+  .btn:hover{background:var(--sand); color:var(--void);}
+
+  /* ---------- footer ---------- */
+  footer{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:48px 8vw; border-top:1px solid var(--sand); background:var(--void);
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.2em; text-transform:uppercase;
+  }
+
+  /* ---------- sound toggle ---------- */
+  #sound-toggle{
+    position:fixed; bottom:24px; right:24px; z-index:500;
+    font-family:var(--font-mono); font-size:10px; letter-spacing:0.2em;
+    padding:10px 16px; border:1px solid var(--dust); color:var(--dust); background:rgba(6,6,8,0.6);
+    cursor:none; transition:color .3s ease, border-color .3s ease;
+  }
+  #sound-toggle:hover{color:var(--sand); border-color:var(--sand);}
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(6,6,8,0.92); z-index:2000;
+    display:none; align-items:center; justify-content:center; flex-direction:column; gap:24px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-close{font-family:var(--font-mono); font-size:11px; letter-spacing:0.2em; border:1px solid var(--sand); padding:10px 20px; cursor:none;}
+  .modal-note{font-family:var(--font-body); font-style:italic; color:var(--dust); max-width:480px; text-align:center; font-size:14px;}
+</style>
+</head>
+<body>
+
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring">
+    <svg viewBox="0 0 48 48"><g stroke="var(--sand)" stroke-width="1" fill="none">
+      <line x1="24" y1="0" x2="24" y2="10"/><line x1="24" y1="38" x2="24" y2="48"/>
+      <line x1="0" y1="24" x2="10" y2="24"/><line x1="38" y1="24" x2="48" y2="24"/>
+    </g></svg>
+  </div>
+
+  <div id="crawl"><p id="crawl-text"></p></div>
+
+  <!-- HERO -->
+  <section id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-content">
+      <div class="hero-title">DUNE</div>
+      <div class="hero-sub">He who controls the spice, controls the universe.</div>
+    </div>
+    <div class="scroll-indicator"></div>
+  </section>
+
+  <!-- ARRAKIS -->
+  <section id="arrakis">
+    <div class="arrakis-pin">
+      <div class="desert-img"></div>
+      <canvas class="shimmer-canvas"></canvas>
+      <div class="world-copy">
+        <div class="world-panel"><span class="eyebrow">01 — THE WORLD</span></div>
+        <div class="world-panel"><h2>ARRAKIS</h2></div>
+        <div class="world-panel"><p class="eyebrow" style="color:var(--bone)">THE DESERT PLANET</p></div>
+        <div class="world-panel"><p class="coords">40°71′ N · 12°02′ E — DUNE SEA SECTOR</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARACTERS -->
+  <section id="characters">
+    <div class="char-track" id="char-track">
+      <div class="char-card" style="--portrait: radial-gradient(circle at 50% 25%, #5a4530, #0E0C0A 75%)">
+        <p class="char-house">House Atreides</p>
+        <h3 class="char-name">Paul Atreides</h3>
+        <p class="char-quote">"The sleeper must awaken."</p>
+      </div>
+      <div class="char-card" style="--portrait: radial-gradient(circle at 50% 25%, #4a3550, #0E0C0A 75%)">
+        <p class="char-house">Bene Gesserit</p>
+        <h3 class="char-name">Lady Jessica</h3>
+        <p class="char-quote">Fear is the mind-killer.</p>
+      </div>
+      <div class="char-card" style="--portrait: radial-gradient(circle at 50% 25%, #3f4a3a, #0E0C0A 75%)">
+        <p class="char-house">Sworn Sword</p>
+        <h3 class="char-name">Duncan Idaho</h3>
+        <p class="char-quote">Loyalty carried past reason.</p>
+      </div>
+      <div class="char-card" style="--portrait: radial-gradient(circle at 50% 25%, #6e4a2a, #0E0C0A 75%)">
+        <p class="char-house">Fremen</p>
+        <h3 class="char-name">Chani</h3>
+        <p class="char-quote">The desert does not forgive.</p>
+      </div>
+      <div class="char-card" style="--portrait: radial-gradient(circle at 50% 25%, #4a3a20, #0E0C0A 75%)">
+        <p class="char-house">Sietch Leader</p>
+        <h3 class="char-name">Stilgar</h3>
+        <p class="char-quote">Bi-lal kaifa. It is written.</p>
+      </div>
+      <div class="char-card" style="--portrait: radial-gradient(circle at 50% 25%, #502020, #0E0C0A 75%)">
+        <p class="char-house">House Harkonnen</p>
+        <h3 class="char-name">Feyd-Rautha</h3>
+        <p class="char-quote">Power respects only power.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPICE -->
+  <section id="spice">
+    <canvas id="spice-canvas"></canvas>
+    <div class="eyebrow" style="position:relative;z-index:2;">02 — THE SPICE</div>
+    <div class="spice-stat" data-count="192">0</div>
+    <div class="spice-sub">Known planets. One produces the spice.</div>
+  </section>
+
+  <!-- HOUSES -->
+  <section id="houses">
+    <div class="house-col" style="--house-color:#3E5C8A;">
+      <svg viewBox="0 0 56 56"><path d="M28 4 L48 28 L28 52 L8 28 Z M28 16 L40 28 L28 40 L16 28 Z" stroke-width="1.5"/></svg>
+      <h3 class="house-name">Atreides</h3>
+      <p class="house-motto">"The spirit of honor endures."</p>
+      <p class="house-desc">Rulers of Caladan, called to Arrakis by imperial decree. Bound by duty more than by ambition.</p>
+    </div>
+    <div class="house-col" style="--house-color:#8B2A2A;">
+      <svg viewBox="0 0 56 56"><path d="M8 48 L28 8 L48 48 Z M18 48 L28 24 L38 48 Z" stroke-width="1.5"/></svg>
+      <h3 class="house-name">Harkonnen</h3>
+      <p class="house-motto">"Strength is the only mercy."</p>
+      <p class="house-desc">Former stewards of the spice, exiled and bitter. They do not forget what was taken.</p>
+    </div>
+    <div class="house-col" style="--house-color:#C8A96E;">
+      <svg viewBox="0 0 56 56"><path d="M28 6 C 40 20, 40 36, 28 50 C 16 36, 16 20, 28 6 Z" stroke-width="1.5"/></svg>
+      <h3 class="house-name">Fremen</h3>
+      <p class="house-motto">"The desert shapes what survives it."</p>
+      <p class="house-desc">Native to Arrakis, hidden in the deep sietch. They read water where none appears to be.</p>
+    </div>
+  </section>
+
+  <!-- PROPHECY -->
+  <section id="prophecy">
+    <canvas id="storm-canvas"></canvas>
+    <div>
+      <div class="eyebrow prophecy-label">03 — THE PROPHECY</div>
+      <p class="prophecy-text" id="prophecy-text"></p>
+    </div>
+  </section>
+
+  <!-- FILM -->
+  <section id="film" class="section-pad">
+    <div class="poster"><span>D</span></div>
+    <div>
+      <div class="eyebrow">04 — THE FILM</div>
+      <h2 style="font-family:var(--font-display); font-size:clamp(32px,4vw,56px); margin:16px 0;">DUNE</h2>
+      <div class="film-meta">
+        <span>DIR. Denis Villeneuve</span><span>2021 / 2024</span><span>155 MIN</span><span>SCORE: Hans Zimmer</span>
+      </div>
+      <ul class="cast-list" id="cast-list">
+        <li>Timothée Chalamet — Paul Atreides</li>
+        <li>Zendaya — Chani</li>
+        <li>Rebecca Ferguson — Lady Jessica</li>
+        <li>Javier Bardem — Stilgar</li>
+        <li>Josh Brolin — Gurney Halleck</li>
+      </ul>
+      <div class="btn-row">
+        <button class="btn" id="watch-trailer">Watch Trailer</button>
+        <a class="btn" href="#hero">Back to Top</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>DUNE</span>
+    <span>Arrakis Awaits</span>
+  </footer>
+
+  <button id="sound-toggle">SND OFF</button>
+
+  <div class="modal-overlay" id="trailer-modal">
+    <p class="modal-note">Trailer embed omitted from this build — swap in an official YouTube embed URL where you have rights to use it.</p>
+    <button class="modal-close" id="modal-close">CLOSE</button>
+  </div>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+/* ================= CUSTOM CURSOR ================= */
+const dot = document.querySelector('.cursor-dot');
+const ring = document.querySelector('.cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+window.addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
+gsap.ticker.add(()=>{
+  rx += (mx-rx)*0.08; ry += (my-ry)*0.08;
+  ring.style.left=rx+'px'; ring.style.top=ry+'px';
+});
+document.querySelectorAll('a, button, .house-col, .char-card').forEach(el=>{
+  el.addEventListener('mouseenter', ()=> ring.classList.add('hover'));
+  el.addEventListener('mouseleave', ()=> ring.classList.remove('hover'));
+});
+document.querySelectorAll('.poster, .desert-img, .char-card').forEach(el=>{
+  el.addEventListener('mouseenter', ()=> ring.classList.add('fill'));
+  el.addEventListener('mouseleave', ()=> ring.classList.remove('fill'));
+});
+
+/* ================= OPENING CRAWL ================= */
+const crawlLine = "A BEGINNING IS A VERY DELICATE TIME.";
+const crawlEl = document.getElementById('crawl-text');
+crawlEl.innerHTML = crawlLine.split('').map(ch=>`<span>${ch===' '?'&nbsp;':ch}</span>`).join('');
+const tlIntro = gsap.timeline({ delay: 0.2 });
+tlIntro.to('#crawl span', { opacity:1, duration:0.04, stagger:0.045, ease:'none' })
+  .to('#crawl', { opacity:0, duration:1, delay:0.9, onComplete:()=>{ document.getElementById('crawl').style.display='none'; } })
+  .to('.hero-title', { opacity:1, y:0, duration:1.6, ease:'power4.out' }, "-=0.6")
+  .to('.hero-sub, .scroll-indicator', { opacity:1, duration:1.2 }, "-=1.0");
+
+/* ================= HERO THREE.JS SAND PARTICLES ================= */
+(function(){
+  const canvas = document.getElementById('hero-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.z = 8;
+
+  const COUNT = 8000;
+  const positions = new Float32Array(COUNT*3);
+  const alphas = new Float32Array(COUNT);
+  for(let i=0;i<COUNT;i++){
+    positions[i*3] = (Math.random()-0.5)*20;
+    positions[i*3+1] = (Math.random()-0.5)*12;
+    positions[i*3+2] = (Math.random()-0.5)*10;
+    alphas[i] = 0.3 + Math.random()*0.6;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('alpha', new THREE.BufferAttribute(alphas,1));
+
+  const material = new THREE.PointsMaterial({
+    color: 0xC8A96E, size: 1.2, sizeAttenuation:true,
+    transparent:true, opacity:0.55, blending: THREE.AdditiveBlending, depthWrite:false
+  });
+  const points = new THREE.Points(geo, material);
+  scene.add(points);
+
+  let targetX=0, targetY=0;
+  window.addEventListener('mousemove', e=>{
+    targetX = (e.clientX/window.innerWidth - 0.5) * 0.6;
+    targetY = (e.clientY/window.innerHeight - 0.5) * 0.4;
+  });
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const pos = geo.attributes.position.array;
+    for(let i=0;i<COUNT;i++){
+      pos[i*3+1] += 0.0025 + (i%7)*0.0002;
+      if(pos[i*3+1] > 6) pos[i*3+1] = -6;
+    }
+    geo.attributes.position.needsUpdate = true;
+    camera.position.x += (targetX - camera.position.x) * 0.03;
+    camera.position.y += (-targetY - camera.position.y) * 0.03;
+    camera.lookAt(0,0,0);
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+
+/* ================= ARRAKIS SCROLL SECTION ================= */
+gsap.to('.desert-img', {
+  scale: 1.15, yPercent: -12,
+  scrollTrigger: { trigger:'#arrakis', start:'top top', end:'bottom bottom', scrub:1.5, pin:'.arrakis-pin', pinSpacing:false }
+});
+gsap.utils.toArray('.world-panel').forEach((el,i)=>{
+  gsap.to(el, {
+    opacity:1, x:0, duration:1,
+    scrollTrigger:{ trigger:'#arrakis', start:`top+=${i*12}% top`, end:`top+=${i*12+20}% top`, scrub:1 }
+  });
+});
+
+/* Heat shimmer canvas (sine displacement, active only in view) */
+(function(){
+  const canvas = document.querySelector('.shimmer-canvas');
+  const ctx = canvas.getContext('2d');
+  let w,h,t=0, visible=false;
+  function resize(){ w=canvas.width=canvas.offsetWidth; h=canvas.height=canvas.offsetHeight; }
+  resize(); window.addEventListener('resize', resize);
+  ScrollTrigger.create({ trigger:'#arrakis', start:'top bottom', end:'bottom top', onToggle:self=>visible=self.isActive });
+  function draw(){
+    requestAnimationFrame(draw);
+    if(!visible) return;
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='rgba(232,220,200,0.05)';
+    for(let y=0;y<h;y+=6){
+      ctx.beginPath();
+      for(let x=0;x<w;x+=8){
+        const offset = Math.sin(x*0.008 + t + y*0.02) * 2;
+        if(x===0) ctx.moveTo(x, y+offset); else ctx.lineTo(x, y+offset);
+      }
+      ctx.stroke();
+    }
+    t += 0.02;
+  }
+  draw();
+})();
+
+/* ================= CHARACTERS HORIZONTAL SCROLL ================= */
+(function(){
+  const track = document.getElementById('char-track');
+  const cards = gsap.utils.toArray('.char-card');
+  gsap.to(track, {
+    x: () => -(track.scrollWidth - window.innerWidth),
+    ease:'none',
+    scrollTrigger:{
+      trigger:'#characters', start:'top top', pin:true, scrub:1,
+      end: () => '+=' + (track.scrollWidth - window.innerWidth)
+    }
+  });
+  cards.forEach(card=>{
+    ScrollTrigger.create({
+      trigger: card, containerAnimation: gsap.getById && undefined,
+      start:'left center', end:'right center',
+    });
+  });
+  // toggle active (colour) state via horizontal scroll progress
+  ScrollTrigger.create({
+    trigger:'#characters', start:'top top', end: () => '+=' + (track.scrollWidth - window.innerWidth),
+    scrub:true,
+    onUpdate: self=>{
+      const total = cards.length;
+      const idx = Math.min(total-1, Math.floor(self.progress * total));
+      cards.forEach((c,i)=> c.classList.toggle('active', i===idx));
+    }
+  });
+})();
+
+/* ================= SPICE COUNTER + PARTICLE CLOUD ================= */
+(function(){
+  const statEl = document.querySelector('.spice-stat');
+  const target = parseInt(statEl.dataset.count,10);
+  let obj={val:0};
+  ScrollTrigger.create({
+    trigger:'#spice', start:'top 60%',
+    onEnter:()=>{ gsap.to(obj, { val: target, duration:2, ease:'power2.out', onUpdate:()=> statEl.textContent = Math.floor(obj.val); }); }
+  });
+
+  const canvas = document.getElementById('spice-canvas');
+  const ctx = canvas.getContext('2d');
+  let w,h;
+  function resize(){ w=canvas.width=canvas.offsetWidth; h=canvas.height=canvas.offsetHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const motes = Array.from({length:220}, ()=>({
+    x:Math.random()*1, y:Math.random()*1, s:Math.random()*2+0.5, sp:Math.random()*0.0006+0.0002
+  }));
+  function draw(){
+    requestAnimationFrame(draw);
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(212,84,26,0.5)';
+    motes.forEach(m=>{
+      m.y -= m.sp;
+      if(m.y<0) m.y=1;
+      ctx.beginPath();
+      ctx.arc(m.x*w, m.y*h, m.s, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+  draw();
+})();
+
+/* ================= PROPHECY — original litany-style text, word reveal ================= */
+(function(){
+  // Original composition in the spirit of a "fear litany" — not reproducing any copyrighted source text.
+  const text = "I will not yield to fear. Fear is the quiet thief of judgment. I will let it move through me, and when it has gone, I will still be standing, and only I will remain.";
+  const el = document.getElementById('prophecy-text');
+  el.innerHTML = text.split(' ').map(w=>`<span class="prophecy-word">${w}</span>`).join(' ');
+  gsap.to('.prophecy-word', {
+    opacity:1, stagger:0.06,
+    scrollTrigger:{ trigger:'#prophecy', start:'top center', end:'bottom center', scrub:true }
+  });
+
+  const canvas = document.getElementById('storm-canvas');
+  const ctx = canvas.getContext('2d');
+  let w,h,visible=false;
+  function resize(){ w=canvas.width=canvas.offsetWidth; h=canvas.height=canvas.offsetHeight; }
+  resize(); window.addEventListener('resize', resize);
+  ScrollTrigger.create({ trigger:'#prophecy', start:'top bottom', end:'bottom top', onToggle:self=>visible=self.isActive });
+
+  // simple pseudo-perlin flow via layered sine noise
+  function noise(x,y,t){
+    return Math.sin(x*0.6+t) + Math.sin(y*0.8-t*0.7) + Math.sin((x+y)*0.3+t*1.3);
+  }
+  const particles = Array.from({length:600}, ()=>({ x:Math.random()*1, y:Math.random()*1 }));
+  let t=0;
+  function draw(){
+    requestAnimationFrame(draw);
+    if(!visible) return;
+    ctx.fillStyle='rgba(6,6,8,0.08)';
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(122,106,84,0.35)';
+    particles.forEach(p=>{
+      const angle = noise(p.x*4,p.y*4,t)*Math.PI;
+      p.x += Math.cos(angle)*0.0012;
+      p.y += Math.sin(angle)*0.0006 + 0.0004;
+      if(p.x>1) p.x=0; if(p.x<0) p.x=1;
+      if(p.y>1) p.y=0;
+      ctx.fillRect(p.x*w, p.y*h, 1.4, 1.4);
+    });
+    t += 0.004;
+  }
+  draw();
+})();
+
+/* ================= FILM SECTION CAST STAGGER ================= */
+gsap.to('#cast-list li', {
+  opacity:1, y:0, stagger:0.08,
+  scrollTrigger:{ trigger:'#film', start:'top 70%' }
+});
+
+/* ================= TRAILER MODAL ================= */
+document.getElementById('watch-trailer').addEventListener('click', ()=> document.getElementById('trailer-modal').classList.add('open'));
+document.getElementById('modal-close').addEventListener('click', ()=> document.getElementById('trailer-modal').classList.remove('open'));
+
+/* ================= SOUND TOGGLE (procedural wind — no external audio file) ================= */
+(function(){
+  const btn = document.getElementById('sound-toggle');
+  let ctx, noiseNode, gainNode, playing=false;
+  function makeWind(){
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const bufferSize = 2*ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for(let i=0;i<bufferSize;i++){
+      const white = Math.random()*2-1;
+      lastOut = (lastOut + 0.02*white)/1.02;
+      data[i] = lastOut*3.5;
+    }
+    noiseNode = ctx.createBufferSource();
+    noiseNode.buffer = buffer; noiseNode.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type='lowpass'; filter.frequency.value=500;
+    gainNode = ctx.createGain(); gainNode.gain.value = 0;
+    noiseNode.connect(filter).connect(gainNode).connect(ctx.destination);
+    noiseNode.start();
+  }
+  btn.addEventListener('click', ()=>{
+    if(!ctx) makeWind();
+    playing = !playing;
+    gainNode.gain.cancelScheduledValues(ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(playing?0.12:0, ctx.currentTime+0.8);
+    btn.textContent = playing ? 'SND ON' : 'SND OFF';
+  });
+})();
+</script>
+</body>
+</html>
